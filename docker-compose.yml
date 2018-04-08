@@ -1,8 +1,9 @@
 version: '3'
 
+
 services:
   web:
-    image: henaras/simpleweb:1
+    image: fydean/422:latest
     ports:
       - "8000:8000"
     deploy:
@@ -15,11 +16,10 @@ services:
     ports:
       - "6379:6379"
     deploy:
-     resources:  
+     resources:
         limits:
           cpus: '0.25'
           memory: 256M
-
   visualizer:
     image: henaras/visualizer
     ports:
