@@ -10,9 +10,9 @@ import sys
 if len(sys.argv) < 4:
     print('To few arguments; you need to specify 3 arguments.')
     print('Default values will be used for server_ip, no of users and think time.\n')
-    swarm_master_ip = '10.2.9.108'  # ip address of the Swarm master node
-    no_users = 1  # number of concurrent users sending request to the server
-    think_time = 1  # the user think time (seconds) in between consequent requests
+    swarm_master_ip = '204.209.76.156'  # ip address of the Swarm master node
+    no_users = 4  # number of concurrent users sending request to the server
+    think_time = 5  # the user think time (seconds) in between consequent requests
 else:
     print('Default values have be overwritten.')
     swarm_master_ip = sys.argv[1]
@@ -21,33 +21,72 @@ else:
 
 
 class MyThread(threading.Thread):
-    def __init__(self, name, counter):
+    def __init__(self, name, counter, numUsers):
         threading.Thread.__init__(self)
         self.threadID = counter
         self.name = name
         self.counter = counter
+        self.numUsers = numUsers
 
     def run(self):
         print("Starting " + self.name + str(self.counter))
-        workload(self.name + str(self.counter))
+        workload(self.name + str(self.counter), (self.numUsers - self.counter) * 2 )
 
+class workLoadThread(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
 
-def workload(user):
-    while True:
+    def run(self):
+        print("Starting workload thread\n")
+        global numRequests
+        global no_users
+        t2 = t0 = time.time()
+        while threadDone < no_users:
+            t1 = time.time()
+            time.sleep(sleepTime)
+            t2 = time.time()
+
+            f = open('workload.txt', 'a')
+            f.write(str(t2 - t0) + ',' + str(numRequests / (t2 - t1)) + '\n')
+            f.close()
+            numRequests = 0
+
+def workload(user, max):
+    global ts
+    #ts = time.time()
+    #while True:
+    for x in range(0, max):
         t0 = time.time()
-        requests.get('http://' + swarm_master_ip + ':8000/')
+        r = requests.get('http://' + swarm_master_ip + ':8000/')
+        #print(r.text)
         t1 = time.time()
-        time.sleep(think_time)
+
+        global numRequests
+        numRequests += 1
+
+        f = open('responseTime.txt', 'a')
+        f.write(str(t1 - ts) + ',' + str(t1 - t0) + '\n')
+        f.close()
+
         print("Response Time for " + user + " = " + str(t1 - t0))
+        time.sleep(think_time)
+    global  threadDone
+    threadDone += 1
 
 
+numRequests = 0
+sleepTime = 5
+ts = 0
+threadDone = 0
 if __name__ == "__main__":
     threads = []
+    workLoadT = workLoadThread()
     for i in range(no_users):
-        threads.append(MyThread("User", i))
-
+        threads.append(MyThread("User", i, no_users))
+    workLoadT.start()
+    ts = time.time()
     for i in range(no_users):
         threads[i].start()
-
+        time.sleep(5)
     for i in range(no_users):
         threads[i].join()
